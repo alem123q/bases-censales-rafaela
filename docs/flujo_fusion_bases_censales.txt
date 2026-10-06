@@ -1,0 +1,315 @@
+FLUJO DE TRABAJO — FUSIÓN DE BASES CENSALES 2001, 2010 Y 2022
+Proyecto: Hogares rafaelinos entre la producción-reproducción
+UNRaf — Directora: Andreina Colombo | Co-director: Carlos Nicolás Sejas
+================================================================================
+
+
+================================================================================
+CONTEXTO Y PUNTO DE PARTIDA
+================================================================================
+
+Al momento de iniciar la fusión se contaba con:
+
+  Censo 2001 — microdatos procesados y codificados (una fila por persona/hogar)
+    hogares_aglomerado_rafaela_2001_COD.csv      (25.910 filas)
+    hogares_rafaela_ciudad_2001_COD.csv          (24.313 filas)
+    individuos_aglomerado_rafaela_2001_COD.csv   (88.674 filas)
+    individuos_rafaela_ciudad_2001_COD.csv       (83.022 filas)
+
+  Censo 2010 — microdatos procesados y codificados (una fila por persona/hogar)
+    hogares_aglomerado_rafaela_2010_COD.csv      (31.684 filas)
+    hogares_rafaela_ciudad_2010_COD.csv          (29.656 filas)
+    individuos_aglomerado_rafaela_2010_COD.csv   (99.052 filas)
+    individuos_rafaela_ciudad_2010_COD.csv       (92.324 filas)
+
+  Censo 2022 — datos agregados por radio exportados desde RedatamX
+    hogares_aglomerado_rafaela_2022_COD.csv      (155 radios)
+    hogares_rafaela_ciudad_2022_COD.csv          (138 radios)
+    individuos_aglomerado_rafaela_2022_COD.csv   (155 radios)
+    individuos_rafaela_ciudad_2022_COD.csv       (138 radios)
+
+PROBLEMA CENTRAL: Las bases de 2001 y 2010 son microdatos (una fila por
+persona/hogar) mientras que las del 2022 son datos agregados por radio
+(una fila por radio con conteos de categorías). Para fusionar los tres
+censos es necesario llevarlos al mismo nivel de análisis.
+
+
+================================================================================
+PARTE 1: FUSIÓN HORIZONTAL
+================================================================================
+
+La fusión horizontal fue la primera estrategia implementada.
+Resultado: una fila por radio, con columnas para cada variable de cada censo.
+
+--------------------------------------------------------------------------------
+PASO 1: Verificación de compatibilidad geográfica
+--------------------------------------------------------------------------------
+Antes de fusionar se verificó que el campo REDCODE (2001/2010) fuera
+equivalente al campo RADIO (2022).
+
+  Resultado:
+    - Ambos usan el código de 9 dígitos (ej: 820210401) ✓
+    - Todos los 79 radios del 2001 están en el 2022 ✓
+    - 72 radios nuevos en 2022 (crecimiento urbano 2001-2022)
+    - Los 5 radios faltantes del 2010 sí existen en el 2022
+
+--------------------------------------------------------------------------------
+PASO 2: Agregar REDCODE a las bases del 2010
+--------------------------------------------------------------------------------
+Las bases del 2010 no tenían REDCODE. Se construyó subiendo por la
+jerarquía geográfica:
+
+  VIVIENDA → RADIO_REF_ID → RADIO → FRAC_REF_ID → FRAC → DPTO → REDCODE
+
+  Fórmula:
+    REDCODE = "82" + IDDPTO(3 dígitos) + IDFRAC(2 dígitos) + IDRADIO(2 dígitos)
+    Ejemplo: "82" + "021" + "05" + "04" = 820210504
+
+  Nota: En el 2001 había un nivel adicional (SEG) entre RADIO y VIVIENDA.
+  En el 2010 ese nivel no existe — VIVIENDA tiene directamente RADIO_REF_ID.
+
+  Resultados:
+    214 radios con REDCODE construido
+    0 filas sin REDCODE en las 4 bases
+
+--------------------------------------------------------------------------------
+PASO 3: Agregar 2001 y 2010 al nivel de radio
+--------------------------------------------------------------------------------
+Para igualar el formato del 2022, se transformaron los microdatos del
+2001 y 2010 en datos agregados por radio.
+
+  Procedimiento por cada variable:
+    1. Agrupar por REDCODE y categoría de la variable
+    2. Contar cuántas personas/hogares tienen cada categoría en cada radio
+    3. Transponer: cada categoría se convierte en una columna
+    4. Unir todas las variables en una sola base
+
+  Ejemplo (variable SEXO):
+    Antes (microdatos):              Después (agregado por radio):
+    REDCODE   | SEXO                 RADIO     | SEXO__Varón | SEXO__Mujer
+    820210401 | Varón                820210401 | 2.107       | 2.100
+    820210401 | Mujer                820210402 | 198         | 210
+    820210401 | Varón
+    820210402 | Varón
+    820210402 | Mujer
+
+  ADVERTENCIA: Al agregar se pierde la relación entre variables. No es
+  posible saber, por ejemplo, cuántas mujeres son ocupadas en un radio
+  determinado — solo se sabe cuántas mujeres hay y cuántos ocupados hay,
+  por separado.
+
+  Bases generadas:
+    hogares_aglomerado_rafaela_2001_por_radio.csv    (79 radios,  254 cols)
+    hogares_rafaela_ciudad_2001_por_radio.csv         (67 radios,  253 cols)
+    individuos_aglomerado_rafaela_2001_por_radio.csv  (79 radios,  543 cols)
+    individuos_rafaela_ciudad_2001_por_radio.csv      (67 radios,  541 cols)
+    hogares_aglomerado_rafaela_2010_por_radio.csv     (97 radios,  155 cols)
+    hogares_rafaela_ciudad_2010_por_radio.csv         (85 radios,  155 cols)
+    individuos_aglomerado_rafaela_2010_por_radio.csv  (97 radios,  204 cols)
+    individuos_rafaela_ciudad_2010_por_radio.csv      (85 radios,  203 cols)
+
+--------------------------------------------------------------------------------
+PASO 4: Limpiar filas especiales del 2022
+--------------------------------------------------------------------------------
+RedatamX agrega automáticamente filas de resumen al exportar:
+  0. __tot__ — total general
+  0. __mv__  — missing values
+  0. __na__  — no aplica
+
+Estas filas no representan radios reales y se eliminaron antes de fusionar.
+
+--------------------------------------------------------------------------------
+PASO 5: Fusión horizontal por radio
+--------------------------------------------------------------------------------
+Se unieron las tres bases usando left join desde el 2022 como base principal.
+
+  Lógica del left join:
+    - El 2022 es la base principal — todos sus radios aparecen en el resultado
+    - El 2001 y 2010 se agregan a la derecha buscando coincidencias por RADIO
+    - Radios del 2022 sin historia (72 radios nuevos) quedan con 0 en 2001/2010
+
+  Las columnas tienen prefijo de año para identificar su origen:
+    2001__SEXO__Varón / 2010__SEXO__Varón / 2022__SEXO__Varón/Masculino
+
+  Bases fusionadas — datos/salida/
+    individuos_aglomerado_rafaela_fusion.csv  (151 radios, 1.352 cols)
+    individuos_rafaela_ciudad_fusion.csv      (134 radios, 1.345 cols)
+    hogares_aglomerado_rafaela_fusion.csv     (151 radios,   565 cols)
+    hogares_rafaela_ciudad_fusion.csv         (134 radios,   562 cols)
+
+  Radios con datos por año:
+    Aglomerado — 2001: 79 / 2010: 97 / 2022: 151
+    Rafaela    — 2001: 67 / 2010: 85 / 2022: 134
+
+--------------------------------------------------------------------------------
+PASO 6: Renombramiento de variables con nombres comunes
+--------------------------------------------------------------------------------
+Se aplicó una tabla de equivalencias para renombrar variables comparables
+entre censos. El formato resultante es: AÑO__NOMBRE_COMUN__CATEGORIA
+
+  Tabla de equivalencias (PROVISIONAL):
+    Variable original                         | Nombre común
+    ------------------------------------------|---------------------
+    2001__P2 / 2010__P02 / 2022__P02          | SEXO
+    2001__P3 / 2010__P03 / 2022__EDAD         | EDAD
+    2001__P1 / 2010__P01                      | PARENTESCO
+    2001__P9A / 2010__P05 / 2022__P13         | PAIS_NACIMIENTO
+    2001__P5 / 2022__P20                      | JUBILACION
+    2001__CP9 / 2022__DESCAPOR                | APORTE_JUBILATORIO
+    2001__CP63 / 2010__CONDACT / 2022__CONDACT| CONDICION_ACTIVIDAD
+    2001__CP7 / 2022__P30                     | CATEGORIA_OCUPACIONAL
+    2001__RAMA2 / 2022__LETRA                 | RAMA_ACTIVIDAD
+    2001__EDADQUI / 2010__EDADQUI / 2022__EDADQUI | EDAD_QUINQUENAL
+    2001__EDADAGRU / 2010__EDADAGRU / 2022__EDADGRU | EDAD_GRUPOS
+
+  Nota: Las equivalencias no son perfectas. Algunas variables tienen
+  el mismo nombre pero categorías distintas entre censos. Requiere
+  revisión de Andreina y Nico antes del análisis final.
+
+
+================================================================================
+PARTE 2: TRANSICIÓN A FUSIÓN VERTICAL
+================================================================================
+
+Andreina y Nico solicitaron una estructura donde los tres censos compartan
+la misma estructura de columnas, con una columna ANIO que identifique el
+año de cada fila. Esto es la fusión vertical.
+
+  Diferencia entre ambas fusiones:
+
+  HORIZONTAL — una fila por radio:
+    RADIO     | 2001__SEXO__Varón | 2010__SEXO__Varón | 2022__SEXO__Varón
+    820210401 | 2.107             | 808               | 0
+
+  VERTICAL — una fila por radio por censo:
+    RADIO     | ANIO | SEXO__Varón | CONDICION_ACTIVIDAD__Ocupado
+    820210401 | 2001 | 2.107       | 0
+    820210401 | 2010 | 808         | 855
+    820210401 | 2022 | 0           | 377
+
+  Decisión: se optó por mantener ÚNICAMENTE la fusión vertical como
+  producto final. La fusión horizontal queda como archivo intermedio
+  del proceso pero no como base de análisis.
+
+  Justificación:
+    - La fusión vertical es el formato estándar para análisis de panel
+    - Es compatible con los principales softwares estadísticos
+      (SPSS, Stata, R, Python)
+    - Todos los análisis posibles con la horizontal se pueden realizar
+      con la vertical mediante un paso adicional de filtrado por ANIO
+    - Es más flexible para análisis longitudinal
+
+
+================================================================================
+PARTE 3: FUSIÓN VERTICAL
+================================================================================
+
+--------------------------------------------------------------------------------
+PASO 1: Renombramiento con nombres comunes en las bases por radio
+--------------------------------------------------------------------------------
+Las bases por radio del 2001 y 2010 tenían nombres originales (P2, P02).
+Se aplicó la tabla de equivalencias para unificar los nombres antes de apilar.
+
+  Formato resultante: NOMBRE_COMUN__CATEGORIA
+  Ejemplo: SEXO__Varón / CONDICION_ACTIVIDAD__Ocupado
+
+--------------------------------------------------------------------------------
+PASO 2: Agregar columna ANIO
+--------------------------------------------------------------------------------
+Se agregó la columna ANIO a cada base antes de apilarlas:
+  Base 2001 → ANIO = "2001"
+  Base 2010 → ANIO = "2010"
+  Base 2022 → ANIO = "2022"
+
+--------------------------------------------------------------------------------
+PASO 3: Apilado vertical (concat)
+--------------------------------------------------------------------------------
+Se apilaron las tres bases verticalmente usando pd.concat.
+Las columnas que no existen en un censo quedan en 0 para ese año.
+
+  Bases fusionadas — datos/salida/
+    individuos_aglomerado_rafaela_vertical.csv  (328 filas, 1.205 cols)
+    individuos_rafaela_ciudad_vertical.csv      (287 filas, 1.200 cols)
+    hogares_aglomerado_rafaela_vertical.csv     (328 filas,   480 cols)
+    hogares_rafaela_ciudad_vertical.csv         (287 filas,   477 cols)
+
+  Filas por año (aglomerado):
+    2001: 79 radios / 2010: 97 radios / 2022: 152 radios = 328 filas total
+
+--------------------------------------------------------------------------------
+PASO 4: Unificación de categorías (columnas UNIF)
+--------------------------------------------------------------------------------
+Algunas variables tienen el mismo nombre común pero categorías distintas
+entre censos. Se crearon columnas unificadas que suman las equivalentes.
+
+  Variables unificadas:
+    SEXO_UNIF__Mujer / SEXO_UNIF__Varon
+      → Suma Mujer + Mujer/Femenino / Varón + Varón/Masculino
+
+    EDAD_GRUPOS_UNIF__0_14 / __15_64 / __65_mas
+      → Unifica los tres formatos de etiqueta entre censos
+
+    EDAD_QUINQUENAL_UNIF__0_4 / __5_9 / __10_14 ... __95_mas
+      → Unifica los tres formatos de etiqueta entre censos
+
+    JUBILACION_UNIF__Si / __No
+      → Unifica Si / Sí entre censos
+
+    CONDACT_UNIF__Ocupado / __Desocupado / __Inactivo / __NOTAPPLICABLE
+      → Agrupa las 13 categorías del 2001 en las 3 del 2010/2022:
+        Ocupado    = Solo trabaja + Trabaja/estudia + Trabaja/es jubilado
+                     + Trabaja/estudia/es jubilado
+        Desocupado = Solo busca trabajo + Busca trabajo/estudia
+                     + Busca trabajo/es jubilado
+                     + Busca trabajo/estudia/es jubilado
+        Inactivo   = Solo estudia + Solo es jubilado + Es jubilado/estudia
+                     + Otra situación
+
+  Total columnas UNIF agregadas: 34
+
+  Totales verificados con columnas UNIF (aglomerado):
+    SEXO   — 2001: 88.674 / 2010: 99.052 / 2022: 110.078 ✓
+    CONDACT— 2001: Ocup=31.876 Desoc=7.277 Inact=26.155
+           — 2010: Ocup=50.919 Desoc=2.691 Inact=22.509
+           — 2022: Ocup=54.955 Desoc=3.983 Inact=28.970
+
+
+================================================================================
+ESTADO FINAL — BASES DISPONIBLES EN Fusion\
+================================================================================
+
+BASES DE ANÁLISIS (fusión vertical — producto final):
+  individuos_aglomerado_rafaela_vertical.csv — 328 filas, 1.205 cols ✓
+  individuos_rafaela_ciudad_vertical.csv     — 287 filas, 1.200 cols ✓
+  hogares_aglomerado_rafaela_vertical.csv    — 328 filas,   480 cols ✓
+  hogares_rafaela_ciudad_vertical.csv        — 287 filas,   477 cols ✓
+
+ARCHIVOS INTERMEDIOS (fusión horizontal — no usar para análisis):
+  individuos_aglomerado_rafaela_fusion.csv  — 151 radios, 1.352 cols
+  individuos_rafaela_ciudad_fusion.csv      — 134 radios, 1.345 cols
+  hogares_aglomerado_rafaela_fusion.csv     — 151 radios,   565 cols
+  hogares_rafaela_ciudad_fusion.csv         — 134 radios,   562 cols
+
+
+================================================================================
+ADVERTENCIAS Y LIMITACIONES
+================================================================================
+
+1. Al agregar los microdatos por radio se pierde la relación entre variables.
+   No es posible hacer análisis multivariado (ej: mujeres ocupadas por radio).
+
+2. Las columnas UNIF son provisionales y requieren validación metodológica
+   de Andreina y Nico, especialmente CONDACT_UNIF.
+
+3. Los 72 radios nuevos del 2022 no tienen datos en 2001 ni 2010.
+   Para análisis longitudinal puro usar solo los 79 radios históricos.
+
+4. RAMA_ACTIVIDAD no es comparable entre 2001 y 2022 (CIIU Rev.3 vs Rev.4).
+
+5. Las variables de ocupación del 2010 están incompletas — solo tiene
+   CONDICION_ACTIVIDAD. Categoría ocupacional y rama de actividad ausentes.
+
+6. Los NOTAPPLICABLE en variables de ocupación corresponden exclusivamente
+   a menores de 14 años. Filtrar >= 14 años antes del análisis de ocupación.
+
+================================================================================

@@ -1,0 +1,177 @@
+GUÍA DE USUARIO — BASES FUSIONADAS 2001 (HOGARES-INDIVIDUOS)
+Proyecto: Hogares rafaelinos entre la producción-reproducción
+UNRaf — Directora: Andreina Colombo | Co-director: Carlos Nicolás Sejas
+================================================================================
+
+
+================================================================================
+1. ¿QUÉ SON ESTAS BASES?
+================================================================================
+
+Son bases de microdatos del Censo 2001 donde cada fila es un HOGAR y las
+columnas combinan dos tipos de información:
+
+  a) Variables propias del hogar (vivienda, materiales, NBI, etc.)
+  b) Variables de cada integrante del hogar, organizadas por parentesco
+
+El objetivo es poder analizar las características de los integrantes del
+hogar (ocupación, educación, etc.) junto con las del hogar donde viven,
+sin necesidad de cruzar bases separadas.
+
+
+================================================================================
+2. ARCHIVOS DISPONIBLES
+================================================================================
+
+Ubicación: datos/salida/
+
+  hogares_individuos_aglomerado_rafaela_2001.csv   — 25.910 hogares, 844 cols
+  hogares_individuos_rafaela_ciudad_2001.csv        — 24.313 hogares, 844 cols
+
+IMPORTANTE: Abrir siempre con Excel usando importación de datos (no doble clic)
+y seleccionando codificación UTF-8 para que las tildes y ñ se vean correctamente.
+
+
+================================================================================
+3. ESTRUCTURA DE LAS COLUMNAS
+================================================================================
+
+Las 844 columnas se dividen en dos bloques:
+
+  BLOQUE 1 — Columnas del hogar (posiciones 0 a 33, total: 34 columnas)
+  -----------------------------------------------------------------------
+  Identificadores y variables propias del hogar. Ejemplos:
+    HOGAR_REF_ID            — ID único del hogar
+    REDCODE                 — Código geográfico del radio (9 dígitos)
+    H1 — Cantidad de personas en el hogar
+    CH12 — Material de las paredes externas
+    CH9 — Servicio sanitario
+    CH6 — Régimen de tenencia
+    CHNBI — Al menos un indicador NBI
+    CH82 — Tipo de hogar
+
+  BLOQUE 2 — Columnas de personas (posiciones 34 a 843, total: 810 columnas)
+  ---------------------------------------------------------------------------
+  Variables de cada integrante, identificadas por su parentesco con el jefe.
+  Formato: PARENTESCO_VARIABLE
+
+  Ejemplos:
+    Jefe_P2        — Sexo del jefe/a del hogar
+    Jefe_CP63      — Condición de actividad del jefe/a
+    Conyuge_RAMA2  — Rama de actividad del cónyuge
+    Hijo1_EDADQUI  — Edad quinquenal del primer hijo/a
+    Hijo2_CP4      — Situación educacional del segundo hijo/a
+
+
+================================================================================
+4. CATEGORÍAS DE PARENTESCO DISPONIBLES
+================================================================================
+
+  Prefijo          | Descripción                        | Máximo por hogar
+  -----------------|------------------------------------|-----------------
+  Jefe             | Jefe o jefa del hogar              | 1
+  Conyuge          | Cónyuge o pareja                   | 1
+  Hijo1...Hijo14   | Hijo/a o Hijastro/a                | 14
+  YernoNuera1...4  | Yerno o Nuera                      | 4
+  Nieto1...Nieto11 | Nieto/a                            | 11
+  PadreMadre1...2  | Padre, Madre o Suegro/a            | 2
+  OtroFamiliar1..9 | Otros familiares                   | 9
+  OtroNoFamiliar1..9| Otros no familiares               | 9
+  ServDom1...3     | Servicio doméstico y sus familiares| 3
+
+  NOTA: Cuando hay celdas vacías (NaN) significa que ese hogar no tiene
+  un integrante en esa posición de parentesco. Por ejemplo, si Hijo3_P2
+  está vacío, ese hogar tiene menos de 3 hijos.
+
+
+================================================================================
+5. VARIABLES DE PERSONAS DISPONIBLES (15 por cada parentesco)
+================================================================================
+
+  Variable  | Descripción
+  ----------|------------------------------------------------
+  P2        | Sexo (Varón / Mujer)
+  P5        | Recibe jubilación o pensión (Sí / No)
+  CP1       | Obra social o plan médico (Tiene / No tiene)
+  P8A       | Dónde vivía hace 5 años
+  CP3       | Asistencia a establecimiento escolar
+  CP4       | Situación educacional (nivel y grado)
+  P20       | Estado civil legal
+  P21       | Convive en pareja o matrimonio
+  EDADQUI   | Edad en grupos quinquenales (0-4, 5-9, 10-14...)
+  EDADAGRU  | Edad en grandes grupos (0-14, 15-64, 65 y más)
+  RAMA2     | Rama de actividad económica (CIIU Rev.3)
+  P295      | Calificación de las ocupaciones
+  CP63      | Condición de actividad desagregada (13 categorías)
+  CP7       | Categoría ocupacional
+  CP9       | Aporte jubilatorio
+
+
+================================================================================
+6. CÓMO USAR LA BASE — EJEMPLOS PRÁCTICOS
+================================================================================
+
+EJEMPLO 1: Ver el sexo y la condición de actividad de todos los jefes
+----------------------------------------------------------------------
+Columnas a usar: Jefe_P2 y Jefe_CP63
+Filtro: ninguno (todos los hogares tienen jefe)
+Nota: el 100% de los hogares tiene datos en las columnas Jefe_
+
+EJEMPLO 2: Comparar la educación del jefe con la del cónyuge
+-------------------------------------------------------------
+Columnas a usar: Jefe_CP4 y Conyuge_CP4
+Filtro: excluir filas donde Conyuge_CP4 esté vacío (68% de hogares tiene cónyuge)
+
+EJEMPLO 3: Ver hogares donde el primer hijo trabaja
+---------------------------------------------------
+Columnas a usar: Hijo1_CP63
+Filtro: Hijo1_CP63 = "Solo trabaja" (u otras categorías de ocupado)
+Nota: 65% de hogares tiene al menos un hijo registrado
+
+EJEMPLO 4: Analizar el tipo de hogar junto con la ocupación del jefe
+--------------------------------------------------------------------
+Columnas a usar: CH82 (tipo de hogar) y Jefe_CP63 (condición actividad)
+Permite ver, por ejemplo, qué proporción de hogares nucleares completos
+tienen al jefe ocupado.
+
+
+================================================================================
+7. ADVERTENCIAS IMPORTANTES
+================================================================================
+
+1. VARIABLES DE OCUPACIÓN — solo aplican a mayores de 14 años.
+   Los menores de 14 tienen NOTAPPLICABLE en CP63, CP7, CP9 y RAMA2.
+   Antes del análisis de clases sociales, filtrar por EDADQUI >= 15-19.
+
+2. CELDAS VACÍAS (NaN) — significan que ese hogar no tiene integrante
+   en esa posición. No son errores — son hogares con menos miembros
+   de ese parentesco.
+
+3. RAMA2 usa clasificación CIIU Revisión 3 (vigente en 2001).
+   NO es comparable directamente con RAMA/LETRA del Censo 2022
+   que usa CIIU Revisión 4.
+
+4. CP63 tiene 13 categorías en 2001 (más detalladas que en 2010/2022).
+   Para comparar con otros censos usar la agrupación CONDACT_UNIF
+   disponible en las bases fusionadas verticales.
+
+5. HOGAR_REF_ID es el identificador interno de Redatam. Es único dentro
+   de esta base pero NO es comparable con IDs de otros censos.
+
+6. CH51 (Hacinamiento del hogar) tiene valores numéricos que representan
+   personas por habitación multiplicado por 1000.
+   Ejemplo: 500 = 0.50 personas por habitación.
+   Para una lectura más clara usar HACIAGRU que ya tiene las categorías
+   agrupadas (Hasta 0,50 / 0,51-1,00 / etc.)
+
+
+================================================================================
+8. TOTALES DE REFERENCIA
+================================================================================
+
+  Base                          | Hogares | % con cónyuge | % con hijos
+  ------------------------------|---------|---------------|------------
+  Aglomerado Rafaela            | 25.910  | 68,3%         | 64,6%
+  Rafaela ciudad                | 24.313  | 68,0%         | 64,7%
+
+================================================================================

@@ -1,0 +1,235 @@
+MANUAL DE USUARIO — BASES CENSALES AGLOMERADO RAFAELA
+Proyecto: Hogares rafaelinos entre la producción-reproducción
+UNRaf — Directora: Andreina Colombo | Co-director: Carlos Nicolás Sejas
+Última actualización: Mayo 2026
+================================================================================
+
+
+================================================================================
+1. ESTRUCTURA GENERAL DE ARCHIVOS
+================================================================================
+
+Todas las bases están en: datos/
+
+Subcarpetas principales:
+  2001\   — Microdatos y bases procesadas del Censo 2001
+  2010\   — Microdatos y bases procesadas del Censo 2010
+  2022\   — Bases agregadas por radio del Censo 2022
+  Fusion\ — Bases fusionadas de los tres censos (usar estas para análisis)
+
+================================================================================
+2. BASES DISPONIBLES PARA ANÁLISIS
+================================================================================
+
+Las bases de trabajo están en datos/salida/
+
+────────────────────────────────────────────────────────────────────────────────
+2.1 FUSIÓN VERTICAL — bases de análisis (PRODUCTO FINAL)
+────────────────────────────────────────────────────────────────────────────────
+Una fila por radio por censo. Columna ANIO indica el año.
+Este es el formato de análisis recomendado y el único producto final.
+
+  individuos_aglomerado_rafaela_vertical.csv  (328 filas, 1.205 columnas)
+  individuos_rafaela_ciudad_vertical.csv      (287 filas, 1.200 columnas)
+  hogares_aglomerado_rafaela_vertical.csv     (328 filas,   480 columnas)
+  hogares_rafaela_ciudad_vertical.csv         (287 filas,   477 columnas)
+
+Estructura:
+  RADIO     | ANIO | SEXO__Varón | CONDICION_ACTIVIDAD__Ocupado
+  820210401 | 2001 | 2.107       | 0
+  820210401 | 2010 | 808         | 855
+  820210401 | 2022 | 0           | 377
+
+Cada radio aparece 3 veces — una por censo.
+Filas por año (aglomerado): 2001=79 / 2010=97 / 2022=152
+
+Uso recomendado: comparación entre censos, análisis longitudinal,
+análisis por radio y por localidad. Compatible con SPSS, Stata, R y Python.
+
+────────────────────────────────────────────────────────────────────────────────
+2.2 FUSIÓN HORIZONTAL — archivos intermedios (NO usar para análisis)
+────────────────────────────────────────────────────────────────────────────────
+Una fila por radio, con columnas por año. Generada como paso intermedio
+del proceso pero reemplazada por la fusión vertical como producto final.
+
+  individuos_aglomerado_rafaela_fusion.csv  (151 radios, 1.352 columnas)
+  individuos_rafaela_ciudad_fusion.csv      (134 radios, 1.345 columnas)
+  hogares_aglomerado_rafaela_fusion.csv     (151 radios,   565 columnas)
+  hogares_rafaela_ciudad_fusion.csv         (134 radios,   562 columnas)
+
+================================================================================
+3. COLUMNAS UNIFICADAS (UNIF)
+================================================================================
+
+Las bases verticales incluyen columnas con sufijo _UNIF que unifican
+categorías equivalentes entre censos para facilitar la comparación.
+
+Variables unificadas disponibles:
+
+  SEXO_UNIF__Mujer / SEXO_UNIF__Varon
+    → Suma Mujer + Mujer/Femenino / Varón + Varón/Masculino
+
+  EDAD_GRUPOS_UNIF__0_14 / __15_64 / __65_mas
+    → Unifica los tres formatos de etiqueta entre censos
+
+  EDAD_QUINQUENAL_UNIF__0_4 / __5_9 / __10_14 ... __95_mas
+    → Unifica los tres formatos de etiqueta entre censos
+
+  JUBILACION_UNIF__Si / __No
+    → Unifica Si / Sí entre censos
+
+  CONDACT_UNIF__Ocupado / __Desocupado / __Inactivo / __NOTAPPLICABLE
+    → Agrupa las 13 categorías del 2001 en las 3 categorías del 2010/2022:
+      Ocupado     = Solo trabaja + Trabaja/estudia + Trabaja/es jubilado
+                    + Trabaja/estudia/es jubilado
+      Desocupado  = Solo busca trabajo + Busca trabajo/estudia
+                    + Busca trabajo/es jubilado + Busca trabajo/estudia/es jubilado
+      Inactivo    = Solo estudia + Solo es jubilado + Es jubilado/estudia
+                    + Otra situación
+      NOTA: esta agrupación es provisional y requiere validación metodológica
+
+Totales verificados con columnas UNIF (aglomerado):
+  SEXO       — 2001: 88.674 / 2010: 99.052 / 2022: 110.078
+  CONDACT    — 2001: Ocup=31.876 Desoc=7.277 Inact=26.155
+             — 2010: Ocup=50.919 Desoc=2.691 Inact=22.509
+             — 2022: Ocup=54.955 Desoc=3.983 Inact=28.970
+
+================================================================================
+4. NOMENCLATURA DE COLUMNAS
+================================================================================
+
+Formato general:
+  AÑO__NOMBRE_VARIABLE__CATEGORIA
+  Ejemplo: 2001__SEXO__Varón
+
+Para bases verticales (sin prefijo de año):
+  NOMBRE_VARIABLE__CATEGORIA
+  Ejemplo: SEXO__Varón
+
+Para columnas unificadas:
+  NOMBRE_VARIABLE_UNIF__CATEGORIA
+  Ejemplo: SEXO_UNIF__Varon
+
+Variables con nombre común entre censos (tabla de equivalencias):
+  NOMBRE COMÚN          | 2001   | 2010    | 2022
+  ----------------------|--------|---------|-----
+  SEXO                  | P2     | P02     | P02
+  EDAD                  | P3     | P03     | EDAD
+  PARENTESCO            | P1     | P01     | —
+  PAIS_NACIMIENTO       | P9A    | P05     | P13
+  JUBILACION            | P5     | —       | P20
+  APORTE_JUBILATORIO    | CP9    | —       | DESCAPOR
+  CONDICION_ACTIVIDAD   | CP63   | CONDACT | CONDACT
+  CATEGORIA_OCUPACIONAL | CP7    | —       | P30
+  RAMA_ACTIVIDAD        | RAMA2  | —       | LETRA
+  EDAD_QUINQUENAL       | EDADQUI| EDADQUI | EDADQUI
+  EDAD_GRUPOS           | EDADAGRU|EDADAGRU| EDADGRU
+
+================================================================================
+5. ADVERTENCIAS IMPORTANTES
+================================================================================
+
+5.1 COMPARABILIDAD DE CATEGORÍAS
+  Algunas variables tienen el mismo nombre común pero categorías distintas
+  entre censos. Usar las columnas UNIF para comparación entre años.
+  Para análisis detallado dentro de un censo, usar las columnas originales.
+
+5.2 VARIABLES DE OCUPACIÓN EN 2010
+  Las bases del 2010 provienen del Cuestionario Básico y NO tienen:
+    - Categoría ocupacional (CP7 / APORTE)
+    - Rama de actividad (RAMA2 / ACT2CIFR)
+    - Aporte jubilatorio (CP9)
+  Solo tiene CONDICION_ACTIVIDAD (Ocupado/Desocupado/Inactivo).
+  Estas variables sí están disponibles en 2001 y 2022.
+
+5.3 MENORES DE 14 AÑOS EN VARIABLES DE OCUPACIÓN
+  Las variables de actividad económica solo aplican a mayores de 14 años.
+  Los menores figuran como NOTAPPLICABLE / CONDACT_UNIF__NOTAPPLICABLE.
+  Antes de cualquier análisis de ocupación, filtrar:
+    df = df[df["ANIO"] == "2001"]  — ejemplo para un año
+    -- luego usar EDAD o EDAD_QUINQUENAL para filtrar >= 14 años
+
+5.4 RADIOS NUEVOS EN 2022
+  72 radios del 2022 no existían en 2001 ni en 2010 — son zonas de
+  crecimiento urbano. En las bases fusionadas estos radios tienen 0
+  en todas las columnas de 2001 y 2010.
+
+5.5 RAMA DE ACTIVIDAD — NO COMPARAR DIRECTAMENTE ENTRE 2001 Y 2022
+  El 2001 usa CIIU Revisión 3 y el 2022 usa CIIU Revisión 4.
+  Las letras (A, B, C...) no significan lo mismo en ambos censos.
+
+5.6 MICRODATOS 2022 NO DISPONIBLES
+  El INDEC no publicó microdatos individuales del Censo 2022.
+  Las bases del 2022 son datos agregados por radio exportados
+  desde RedatamX. No es posible hacer análisis a nivel de persona
+  u hogar para 2022.
+
+================================================================================
+6. COBERTURA GEOGRÁFICA
+================================================================================
+
+Las bases cubren el Aglomerado Rafaela compuesto por:
+
+  Localidad     | Radios 2001 | Radios 2010 | Radios 2022
+  --------------|-------------|-------------|------------
+  Rafaela       | 67          | 85          | 134
+  Bella Italia  | 2           | 2           | 4
+  Lehmann       | 5           | 5           | 7
+  Roca          | 3           | 3           | 4
+  Susana        | 2           | 2           | 4
+  TOTAL         | 79          | 97          | 153
+
+Las bases de "rafaela_ciudad" incluyen solo los radios de Rafaela.
+Las bases de "aglomerado" incluyen todas las localidades.
+
+================================================================================
+7. LIMITACIONES DE LA FUSIÓN VERTICAL
+================================================================================
+
+7.1 CATEGORÍAS NO COMPARABLES SIN COLUMNAS UNIF
+  Las categorías de una misma variable difieren entre censos. Por ejemplo
+  SEXO__Varón existe en 2001 y 2010 pero en 2022 se llama
+  SEXO__Varón/Masculino. Sumar directamente las columnas originales da
+  resultados incorrectos. Usar siempre las columnas UNIF para comparar
+  entre años.
+
+7.2 RADIOS NUEVOS DEL 2022 DISTORSIONAN PROMEDIOS
+  72 radios del 2022 no existían en 2001 ni en 2010. Si se calculan
+  promedios o tendencias sobre todos los radios, los nuevos distorsionan
+  el resultado porque no tienen historia previa. Para análisis longitudinal
+  limpio, filtrar solo los 79 radios presentes en los tres censos:
+    radios_comunes = df[df["ANIO"]=="2001"]["RADIO"].unique()
+    df_comun = df[df["RADIO"].isin(radios_comunes)]
+
+7.3 EL 2022 NO TIENE MICRODATOS INDIVIDUALES
+  Las filas del 2022 son frecuencias agregadas, no microdatos reales.
+  No es posible calcular promedios de edad, medianas, ni estadísticos
+  que requieran datos individuales para el 2022. Solo se pueden usar
+  conteos por categoría.
+
+7.4 VARIABLES DE OCUPACIÓN INCOMPLETAS EN 2010
+  Las filas del 2010 solo tienen CONDICION_ACTIVIDAD. No tienen categoría
+  ocupacional, rama de actividad ni aporte jubilatorio. Cualquier análisis
+  de clases sociales que requiera esas variables solo funcionará para
+  2001 y 2022.
+
+7.5 RAMA DE ACTIVIDAD NO COMPARABLE ENTRE 2001 Y 2022
+  Aunque ambos censos usan letras A-Z, corresponden a clasificaciones
+  CIIU distintas (Revisión 3 en 2001, Revisión 4 en 2022). Las columnas
+  UNIF no resuelven este problema — la mayoría de las letras tienen
+  significados diferentes entre censos. No comparar directamente.
+
+7.6 CONDACT_UNIF ES PROVISIONAL
+  La agrupación de las 13 categorías del 2001 en las 3 del 2010/2022
+  (Ocupado/Desocupado/Inactivo) requiere validación metodológica.
+  Por ejemplo: ¿"Solo es jubilado" es Inactivo? ¿"Busca trabajo/estudia"
+  es Desocupado? Estas decisiones dependen del marco teórico del proyecto.
+
+================================================================================
+8. CONTACTO TÉCNICO
+================================================================================
+
+Para consultas sobre el procesamiento de los datos: Francisco
+Scripts de procesamiento: scripts/ (este repositorio)
+
+================================================================================

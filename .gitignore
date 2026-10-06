@@ -1,0 +1,15 @@
+# Datos censales: no se versionan (tamaño)
+datos/
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
